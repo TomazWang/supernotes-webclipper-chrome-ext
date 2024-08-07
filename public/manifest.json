@@ -20,5 +20,11 @@
             "matches": ["<all_urls>"],
             "js": ["contentScript.js"]
         }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": ["tailwind.css"],
+            "matches": ["<all_urls>"]
+        }
     ]
 }

@@ -14,7 +14,7 @@ chrome.action.onClicked.addListener((tab) => {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('[background] - Received message', request);
-    if (request.action === 'GET_TAB_INFO') {
+    if (request.action === 'GET_TAB_INFO' && sender.tab) {
         console.log('[background] - GET_TAB_INFO, sending tab info');
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             const tab = tabs[0];

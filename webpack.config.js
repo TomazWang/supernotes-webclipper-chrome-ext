@@ -2,6 +2,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 module.exports = {
   mode: 'production',
@@ -10,6 +11,7 @@ module.exports = {
     options: './src/pages/options/index.tsx',
     background: './src/background/index.ts',
     contentScript: './src/contentScript/index.ts',
+    styles: './src/styles/tailwind.css'
   },
   output: {
     path: path.resolve(__dirname, 'build'),
@@ -25,7 +27,7 @@ module.exports = {
       },
       {
         test: /\.css$/,
-        use: ['style-loader', 'css-loader', 'postcss-loader'],
+        use: [MiniCssExtractPlugin.loader, 'css-loader', 'postcss-loader'],
       },
     ],
   },
@@ -48,6 +50,9 @@ module.exports = {
         { from: "public/manifest.json", to: "manifest.json" },
         { from: "public/icon.png", to: "icon.png" },
       ],
+    }),
+    new MiniCssExtractPlugin({
+      filename: 'tailwind.css',
     }),
   ],
 };
