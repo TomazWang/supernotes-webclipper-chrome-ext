@@ -11,3 +11,15 @@ chrome.action.onClicked.addListener((tab) => {
         chrome.tabs.sendMessage(tab.id, { action: 'TOGGLE_POPUP' });
     }
 });
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    console.log('[background] - Received message', request);
+    if (request.action === 'GET_TAB_INFO') {
+        console.log('[background] - GET_TAB_INFO, sending tab info');
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            const tab = tabs[0];
+            sendResponse({ title: tab.title, url: tab.url });
+        });
+        return true; // send a response asynchronously
+    }
+});

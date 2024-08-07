@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Settings } from 'lucide-react';
+import '../../styles/tailwind.css';
 
 const Popup = () => {
     const [title, setTitle] = useState('');
@@ -9,15 +10,15 @@ const Popup = () => {
 
     useEffect(() => {
         console.log('[pages/popup] - useEffect()');
-        if (chrome && chrome.tabs && chrome.tabs.query) {
-            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                const tab = tabs[0];
-                setTitle(tab.title || '');
-                setUrl(new URL(tab.url || '').hostname);
-            });
-        } else {
-            console.error('[pages/popup] #useEffect() - chrome.tabs.query is not available');
-        }
+        chrome.runtime.sendMessage({ action: 'GET_TAB_INFO' }, (response) => {
+            if (response) {
+                console.log('[pages/popup] #useEffect() - Tab info:', response);
+                setTitle(response.title || '');
+                setUrl(new URL(response.url || '').hostname);
+            } else {
+                console.error('[pages/popup] #useEffect() - Failed to get tab info');
+            }
+        });
     }, []);
 
     const handleCapture = () => {
@@ -31,7 +32,7 @@ const Popup = () => {
     };
 
     return (
-        <div className="w-80 bg-[#222325] text-white p-4 rounded-lg shadow-lg" onKeyDown={handleKeyDown}>
+        <div id="popup" className="w-[373px] bg-[#222325] text-white p-4 rounded-lg shadow-lg" onKeyDown={handleKeyDown}>
             <div className="flex justify-between items-center mb-4">
                 <div className="text-[#ED7084] font-bold">SN Web Clipper</div>
                 <button className="text-gray-400 hover:text-white">Remove</button>
