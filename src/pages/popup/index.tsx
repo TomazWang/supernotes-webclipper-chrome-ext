@@ -1,6 +1,8 @@
+// popup/index.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Save, Settings } from 'lucide-react';
 import '../../styles/tailwind.css';
+import { GET_TAB_INFO, GET_TAB_INFO_RESPONSE } from '../../common/actions';
 
 const Popup = () => {
     const [title, setTitle] = useState('');
@@ -13,25 +15,44 @@ const Popup = () => {
     useEffect(() => {
         console.log('[pages/popup] - useEffect()');
 
-        // Listen for messages from the content script
-        window.addEventListener('message', (event) => {
-            if (event.data.action === 'GET_TAB_INFO') {
-                console.log('[pages/popup] - Received GET_TAB_INFO message:', event.data);
+        const handleMessage = (event: MessageEvent) => {
+            console.log('[pages/popup] - Received message:', event);
+
+            if (event.data.action === GET_TAB_INFO_RESPONSE) {
+                console.log('[pages/popup] - Received GET_TAB_INFO_RESPONSE message:', event.data);
                 const { title, url } = event.data;
                 setTitle(title || '');
                 const urlObject = new URL(url || '');
                 setUrl(urlObject.hostname);
                 setFavicon(`https://www.google.com/s2/favicons?domain=${urlObject.hostname}&sz=64`);
+            } else {
+                console.log('[pages/popup] - Ignored message:', event.data);
             }
+        };
+
+        // Listen for messages from the content script
+        console.log('[pages/popup] - Adding event listener', {
+            window: window,
+            windowActiveElement: window.document.activeElement,
+            windowParent: window.parent,
+            windowParentActiveElement: window.parent.document.activeElement,
         });
 
+        // TODO: for some reason, this "window" is not iframe's window, but the parent window
+        window.addEventListener('message', handleMessage);
+
         // Request tab info from content script
-        window.parent.postMessage({ action: 'GET_TAB_INFO' }, '*');
+        window.parent.postMessage({ action: GET_TAB_INFO }, '*');
 
         // Auto-focus on the notes text field
         if (notesRef.current) {
             notesRef.current.focus();
         }
+
+        return () => {
+            console.log('[pages/popup] - Cleanup');
+            window.removeEventListener('message', handleMessage); // remove the event listener on unmount
+        };
     }, []);
     const handleCapture = () => {
         console.log('[pages/popup] #handleCapture() - Captured: ', { title, url, notes, tags });
