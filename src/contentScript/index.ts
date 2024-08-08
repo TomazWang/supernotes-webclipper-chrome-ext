@@ -7,6 +7,12 @@ import { GET_TAB_INFO, GET_TAB_INFO_RESPONSE } from '../common/actions';
 
 let popupContainer: HTMLIFrameElement | null = null;
 
+/**
+ * ## Init
+ * Create a popup iframe
+ * @returns
+ * ---------------------------------------
+ */
 function createPopupContainer() {
     console.log('[contentScript] #createPopupContainer() - Creating popup container');
     const iframe = document.createElement('iframe');
@@ -55,6 +61,10 @@ async function injectPopup(iframe: HTMLIFrameElement) {
     }
 }
 
+/**
+ * ## Toggle Popup
+ * ---------------------------------------
+ */
 function togglePopup() {
     console.log('[contentScript] #togglePopup() - Toggling popup');
     if (popupContainer) {
@@ -77,6 +87,25 @@ function sendMessageToPopup(message: { action: string; [key: string]: unknown })
     }
 }
 
+/**
+ * Get description from meta tags
+ * @returns
+ * ---------------------------------------
+ */
+function getMetaDescription(): string {
+    const metaTags = ['description', 'og:description', 'twitter:description'];
+
+    for (const tag of metaTags) {
+        const metaTag = document.querySelector(`meta[name="${tag}"], meta[property="${tag}"]`);
+        if (metaTag) {
+            const content = metaTag.getAttribute('content');
+            if (content) return content;
+        }
+    }
+
+    return '';
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('[contentScript] - Received message:', { message, sender });
     if (message.action === 'TOGGLE_POPUP') {
@@ -90,9 +119,12 @@ window.addEventListener('message', (event) => {
     console.log('[contentScript] - Received message from popup/iframe:', event.data);
     if (event.data.action === GET_TAB_INFO) {
         console.log('[contentScript] - Received GET_TAB_INFO message:', event.data);
+        const title = document.title;
+        const description = getMetaDescription();
+        // fw msg to background to get tab info
         chrome.runtime.sendMessage(event.data, (response) => {
             console.log('[contentScript] - Received response from background:', response);
-            const msg = { action: GET_TAB_INFO_RESPONSE, ...response };
+            const msg = { action: GET_TAB_INFO_RESPONSE, url: response.url, description, title };
             sendMessageToPopup(msg);
         });
     }
