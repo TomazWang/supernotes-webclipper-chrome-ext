@@ -1,18 +1,29 @@
 // contentScript/index.ts
 
+import { browser, Runtime } from 'webextension-polyfill-ts';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import Popup from '../pages/popup';
-import { GET_TAB_INFO, GET_TAB_INFO_RESPONSE } from '../common/actions';
+import {
+    GET_TAB_INFO,
+    GET_TAB_INFO_RESPONSE,
+    TOGGLE_POPUP,
+    CAPTURE_TAB,
+    CAPTURE_TAB_RESPONSE,
+    CREATE_CARD,
+    CREATE_CARD_RESPONSE,
+    CLOSE_POPUP,
+} from '../common/actions';
+import { Message, Response } from '../common/messageTypes';
+
+console.log('[contentScript] Content script loaded');
 
 let popupContainer: HTMLIFrameElement | null = null;
 
-/**
- * ## Init
- * Create a popup iframe
- * @returns
- * ---------------------------------------
- */
+// ------------------------------------------------------------------------------
+// ## Popup - Create a popup iframe
+// ------------------------------------------------------------------------------
+
 function createPopupContainer() {
     console.log('[contentScript] #createPopupContainer() - Creating popup container');
     const iframe = document.createElement('iframe');
@@ -61,10 +72,6 @@ async function injectPopup(iframe: HTMLIFrameElement) {
     }
 }
 
-/**
- * ## Toggle Popup
- * ---------------------------------------
- */
 function togglePopup() {
     console.log('[contentScript] #togglePopup() - Toggling popup');
     if (popupContainer) {
@@ -79,6 +86,17 @@ function togglePopup() {
     }
 }
 
+function forceClosePopup() {
+    console.log('[contentScript] #forceClosePopup() - Closing popup forcefully');
+    if (popupContainer) {
+        console.log('[contentScript] #forceClosePopup() - Removing popup container');
+        document.body.removeChild(popupContainer);
+        popupContainer = null;
+    } else {
+        console.log('[contentScript] #forceClosePopup() - Popup container not found');
+    }
+}
+
 function sendMessageToPopup(message: { action: string; [key: string]: unknown }) {
     if (popupContainer && popupContainer.contentWindow) {
         popupContainer.contentWindow.parent.postMessage(message, '*');
@@ -87,11 +105,18 @@ function sendMessageToPopup(message: { action: string; [key: string]: unknown })
     }
 }
 
-/**
- * Get description from meta tags
- * @returns
- * ---------------------------------------
- */
+// ------------------------------------------------------------------------------
+// ## Get tab data
+// ------------------------------------------------------------------------------
+
+async function getTabData(): Promise<{ title: string; url: string; description: string }> {
+    console.log('[contentScript] #getTabData - Getting tab data');
+    const response = await browser.runtime.sendMessage({ action: GET_TAB_INFO });
+    const { title, url } = response;
+    const description = getMetaDescription();
+    return { title, url, description };
+}
+
 function getMetaDescription(): string {
     const metaTags = ['description', 'og:description', 'twitter:description'];
 
@@ -106,35 +131,61 @@ function getMetaDescription(): string {
     return '';
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('[contentScript] - Received message:', { message, sender });
-    if (message.action === 'TOGGLE_POPUP') {
-        console.log('[contentScript] Received TOGGLE_POPUP message');
-        togglePopup();
-    }
-});
+function createCardMarkup(data: { title: string; url: string; description: string; notes: string; tags: string[] }): {
+    name: string;
+    markup: string;
+    tags: string[];
+} {
+    console.log('[contentScript] #createCardMarkup - Creating card markup', data);
+    const cardContent = `
+${data.url}
+> ${data.description}
+
+${data.notes}`;
+
+    const cardTitle = `Web Clip - ${data.title}`;
+    const tags = [...data.tags, '__clip'];
+
+    return {
+        name: cardTitle,
+        markup: cardContent,
+        tags: tags,
+    };
+}
+
+// browser messages
+// ==============================
 
 // Forward messages from popup to background
-window.addEventListener('message', (event) => {
-    console.log('[contentScript] - Received message from popup/iframe:', event.data);
+window.addEventListener('message', async (event) => {
+    console.log('[contentScript]# - Received message from popup', event.data);
     if (event.data.action === GET_TAB_INFO) {
-        console.log('[contentScript] - Received GET_TAB_INFO message:', event.data);
-        const title = document.title;
-        const description = getMetaDescription();
-        // fw msg to background to get tab info
-        chrome.runtime.sendMessage(event.data, (response) => {
-            console.log('[contentScript] - Received response from background:', response);
-            const msg = { action: GET_TAB_INFO_RESPONSE, url: response.url, description, title };
-            sendMessageToPopup(msg);
-        });
+        // get preview info from current tab
+        const tabData = await getTabData();
+        sendMessageToPopup({ action: GET_TAB_INFO_RESPONSE, ...tabData });
+    } else if (event.data.action === CAPTURE_TAB) {
+        // create card and save to Supernotes
+        const cardData = createCardMarkup(event.data.data);
+        const response = await browser.runtime.sendMessage({ action: CREATE_CARD, data: cardData });
+        sendMessageToPopup(response);
+    } else if (event.data.action === CLOSE_POPUP) {
+        forceClosePopup();
     }
-
-    console.log('[contentScript] - Forwarding message to background:', event);
-    chrome.runtime.sendMessage(event.data);
 });
 
 // Forward messages from background to iframe
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('[contentScript] - Received message from background:', { message, sender });
-    sendMessageToPopup(message);
+browser.runtime.onMessage.addListener(async (message: Message): Promise<Response> => {
+    console.log('[contentScript] Received message from background', message);
+
+    switch (message.action) {
+        case TOGGLE_POPUP:
+            togglePopup();
+            return { success: 'TOGGLE_POPUP_SUCCESS' };
+        case CREATE_CARD_RESPONSE:
+            sendMessageToPopup({ action: CAPTURE_TAB_RESPONSE, result: message.result });
+            return;
+        default:
+            console.warn('[contentScript] Unhandled message action:', message.action);
+            return;
+    }
 });

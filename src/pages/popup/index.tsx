@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Settings } from 'lucide-react';
 import '../../styles/tailwind.css';
-import { GET_TAB_INFO, GET_TAB_INFO_RESPONSE } from '../../common/actions';
+import { GET_TAB_INFO, GET_TAB_INFO_RESPONSE, CAPTURE_TAB, CAPTURE_TAB_RESPONSE, CLOSE_POPUP } from '../../common/actions';
 
 const Popup = () => {
     const [title, setTitle] = useState('');
@@ -11,6 +11,9 @@ const Popup = () => {
     const [tags, setTags] = useState('');
     const [favicon, setFavicon] = useState('');
     const [desc, setDesc] = useState('');
+    const [isCapturing, setIsCapturing] = useState(false);
+    const [captureResult, setCaptureResult] = useState<{ success: boolean; message: string } | null>(null);
+
     const notesRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
@@ -20,25 +23,23 @@ const Popup = () => {
             console.log('[pages/popup] - Received message:', event);
 
             if (event.data.action === GET_TAB_INFO_RESPONSE) {
-                console.log('[pages/popup] - Received GET_TAB_INFO_RESPONSE message:', event.data);
+                console.log('[popup] Updating tab info');
                 const { title, url, description } = event.data;
                 setTitle(title || '');
-                const urlObject = new URL(url || '');
-                setUrl(urlObject.hostname);
-                setFavicon(`https://www.google.com/s2/favicons?domain=${urlObject.hostname}&sz=64`);
+                setUrl(new URL(url || '').hostname);
+                setFavicon(`https://www.google.com/s2/favicons?domain=${new URL(url || '').hostname}&sz=64`);
                 setDesc(description || '');
-            } else {
-                console.log('[pages/popup] - Ignored message:', event.data);
+            } else if (event.data.action === CAPTURE_TAB_RESPONSE) {
+                console.log('[popup] Capture result received', event.data.result);
+                setIsCapturing(false);
+                setCaptureResult(event.data.result);
+                if (event.data.result.success) {
+                    setTimeout(() => {
+                        window.parent.postMessage({ action: CLOSE_POPUP }, '*');
+                    }, 2000);
+                }
             }
         };
-
-        // Listen for messages from the content script
-        console.log('[pages/popup] - Adding event listener', {
-            window: window,
-            windowActiveElement: window.document.activeElement,
-            windowParent: window.parent,
-            windowParentActiveElement: window.parent.document.activeElement,
-        });
 
         // TODO: for some reason, this "window" is not iframe's window, but the parent window
         window.addEventListener('message', handleMessage);
@@ -56,12 +57,23 @@ const Popup = () => {
             window.removeEventListener('message', handleMessage); // remove the event listener on unmount
         };
     }, []);
+
     const handleCapture = () => {
-        console.log('[pages/popup] #handleCapture() - Captured: ', { title, url, notes, tags });
+        console.log('[popup] Capture initiated');
+        setIsCapturing(true);
+        const captureData = {
+            title,
+            url,
+            description: desc,
+            notes,
+            tags: tags ? tags.split(',').map((tag) => tag.trim()) : [],
+        };
+        window.parent.postMessage({ action: CAPTURE_TAB, data: captureData }, '*');
     };
 
     const handleCancel = () => {
-        throw new Error('Function not implemented.');
+        console.log('[pages/popup] #handleCancel() - Cancelled');
+        window.parent.postMessage({ action: CLOSE_POPUP }, '*');
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -143,21 +155,26 @@ const Popup = () => {
                     onClick={handleCancel}
                     title="Cancel (Esc)"
                 >
-                    {/* <X size={20} className="mr-2" /> */}
                     Cancel
                     <span className="ml-2 text-xs bg-gray-700 px-1.5 py-0.5 rounded">Esc</span>
                 </button>
                 <button
                     id="snc-capture"
-                    className="flex items-center bg-[#ED7084] hover:bg-[#d55f73] text-white font-bold py-2 px-4 rounded"
+                    className={`flex items-center bg-[#ED7084] hover:bg-[#d55f73] text-white font-bold py-2 px-4 rounded ${
+                        isCapturing ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                     onClick={handleCapture}
+                    disabled={isCapturing}
                     title="Capture (CMD+Enter)"
                 >
-                    {/* <Save size={20} className="mr-2" /> */}
-                    Capture
+                    {isCapturing ? 'Capturing...' : 'Capture'}
                     <span className="ml-2 text-xs bg-white bg-opacity-20 px-1.5 py-0.5 rounded">⌘+Enter</span>
                 </button>
             </div>
+
+            {captureResult && (
+                <div className={`mt-4 p-2 rounded ${captureResult.success ? 'bg-green-500' : 'bg-red-500'}`}>{captureResult.message}</div>
+            )}
         </div>
     );
 };
