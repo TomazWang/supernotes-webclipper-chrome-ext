@@ -38,12 +38,12 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './public/index.html',
       filename: 'popup.html',
-      chunks: ['popup'],
+      chunks: ['popup', 'styles'],
     }),
     new HtmlWebpackPlugin({
-      template: './public/index.html',
+      template: './public/options.html',
       filename: 'options.html',
-      chunks: ['options'],
+      chunks: ['options', 'styles'],
     }),
     new CopyPlugin({
       patterns: [

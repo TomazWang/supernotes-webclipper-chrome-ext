@@ -1,6 +1,6 @@
 // popup/index.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Settings, X } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import '../../styles/tailwind.css';
 import { GET_TAB_INFO, GET_TAB_INFO_RESPONSE } from '../../common/actions';
 
@@ -59,7 +59,7 @@ const Popup = () => {
     const handleCapture = () => {
         console.log('[pages/popup] #handleCapture() - Captured: ', { title, url, notes, tags });
     };
-    
+
     const handleCancel = () => {
         throw new Error('Function not implemented.');
     };

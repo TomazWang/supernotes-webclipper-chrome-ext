@@ -1,17 +1,19 @@
+console.log('[options/index] - Options page loaded');
+
 import React from 'react';
-import ReactDOM from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
+import Options from './Options';
 
-const Options: React.FC = () => {
-  return (
-    <div>
-      <h1>Supernotes Web Clipper Options</h1>
-    </div>
-  );
-};
+const container = document.getElementById('root');
+if (container) {
+    console.log('[options/index] - Root container found in HTML');
+    const root = createRoot(container);
 
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
-root.render(
-  <React.StrictMode>
-    <Options />
-  </React.StrictMode>
-);
+    root.render(
+        <React.StrictMode>
+            <Options />
+        </React.StrictMode>
+    );
+} else {
+    console.error('[options/index] - Root container not found in HTML');
+}

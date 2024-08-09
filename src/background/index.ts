@@ -1,4 +1,4 @@
-import { GET_TAB_INFO, TOGGLE_POPUP } from "../common/actions";
+import { GET_TAB_INFO, TOGGLE_POPUP } from '../common/actions';
 
 // background/index.ts
 console.log('[background] - Background script loaded');
@@ -11,7 +11,13 @@ chrome.action.onClicked.addListener((tab) => {
     console.log('[background] - Action clicked', tab);
     if (tab.id) {
         console.log('[background] - Sending TOGGLE_POPUP message to tab', tab.id);
-        chrome.tabs.sendMessage(tab.id, { action: TOGGLE_POPUP });
+        chrome.tabs.sendMessage(tab.id, { action: TOGGLE_POPUP }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.error('[background] - Error sending message:', chrome.runtime.lastError);
+            } else {
+                console.log('[background] - Message sent successfully', response);
+            }
+        });
     }
 });
 
