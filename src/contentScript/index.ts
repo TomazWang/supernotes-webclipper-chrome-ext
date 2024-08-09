@@ -98,6 +98,7 @@ function forceClosePopup() {
 }
 
 function sendMessageToPopup(message: { action: string; [key: string]: unknown }) {
+    console.log(`[contentScript] #sendMessageToPopup() - Sending message to popup, action = ${message.action}`, message);
     if (popupContainer && popupContainer.contentWindow) {
         popupContainer.contentWindow.parent.postMessage(message, '*');
     } else {
@@ -153,12 +154,28 @@ ${data.notes}`;
     };
 }
 
+// ------------------------------------------------------------------------------
+// Closing the popup
+// ------------------------------------------------------------------------------
+function closePopupWithAnimation() {
+    console.log('[contentScript] #closePopupWithAnimation() - Closing popup with animation');
+    if (popupContainer) {
+        popupContainer.style.transition = 'opacity 300ms ease-out';
+        popupContainer.style.opacity = '0';
+        setTimeout(() => {
+            forceClosePopup();
+        }, 300);
+    } else {
+        console.log('[contentScript] #closePopupWithAnimation() - Popup container not found');
+    }
+}
+
 // browser messages
 // ==============================
 
 // Forward messages from popup to background
 window.addEventListener('message', async (event) => {
-    console.log('[contentScript]# - Received message from popup', event.data);
+    console.log(`[contentScript]# - Received message from popup, action = ${event.data.action}`, event.data);
     if (event.data.action === GET_TAB_INFO) {
         // get preview info from current tab
         const tabData = await getTabData();
@@ -167,15 +184,16 @@ window.addEventListener('message', async (event) => {
         // create card and save to Supernotes
         const cardData = createCardMarkup(event.data.data);
         const response = await browser.runtime.sendMessage({ action: CREATE_CARD, data: cardData });
-        sendMessageToPopup(response);
+        console.log('[contentScript] Received CREATE_CARD_RESPONSE', response);
+        sendMessageToPopup({ action: CAPTURE_TAB_RESPONSE, result: response.result });
     } else if (event.data.action === CLOSE_POPUP) {
-        forceClosePopup();
+        closePopupWithAnimation();
     }
 });
 
 // Forward messages from background to iframe
 browser.runtime.onMessage.addListener(async (message: Message): Promise<Response> => {
-    console.log('[contentScript] Received message from background', message);
+    console.log(`[contentScript] Received message from background, action = ${message.action}`, message);
 
     switch (message.action) {
         case TOGGLE_POPUP:

@@ -1,8 +1,7 @@
 // background/index.ts
 import { browser } from 'webextension-polyfill-ts';
-import { TOGGLE_POPUP, CREATE_CARD, CREATE_CARD_RESPONSE } from '../common/actions';
+import { TOGGLE_POPUP, CREATE_CARD, CREATE_CARD_RESPONSE, GET_TAB_INFO, GET_TAB_INFO_RESPONSE } from '../common/actions';
 import { simpleCreateCard } from '../utils/api';
-import { GET_TAB_INFO, GET_TAB_INFO_RESPONSE } from '../common/actions';
 
 console.log('[background] Background script loaded');
 
@@ -38,26 +37,36 @@ browser.action.onClicked.addListener((tab) => {
     }
 });
 
-browser.runtime.onMessage.addListener(async (request) => {
-    console.log('[background] Received message', request);
+browser.runtime.onMessage.addListener((request) => {
+    console.log(`[background] Received message, action = ${request.action}`, request);
 
-    if (request.action === GET_TAB_INFO) {
-        const tabInfo = await getTabInfo();
-        return { action: GET_TAB_INFO_RESPONSE, ...tabInfo };
-    } else if (request.action === CREATE_CARD) {
-        console.log('[background] CREATE_CARD, creating Supernotes card');
-        try {
-            const apiKey = await getApiKey();
-            if (!apiKey) {
-                throw new Error('API key not found. Please set it in the extension options.');
-            }
-            const result = await simpleCreateCard(apiKey, request.data);
-            console.log('[background] Supernotes card created successfully', result);
-            return { action: CREATE_CARD_RESPONSE, result: { success: true, message: 'Card created successfully!' } };
-        } catch (error) {
-            console.error('[background] Failed to create Supernotes card', error);
-            const errorMessage = (error as Error).message;
-            return { action: CREATE_CARD_RESPONSE, result: { success: false, message: errorMessage } };
+    return new Promise(async (resolve) => {
+        if (request.action === GET_TAB_INFO) {
+            const tabInfo = await getTabInfo();
+            resolve({ action: GET_TAB_INFO_RESPONSE, ...tabInfo });
         }
-    }
+
+        if (request.action === CREATE_CARD) {
+            console.log('[background] CREATE_CARD, creating Supernotes card');
+            try {
+                const apiKey = await getApiKey();
+                if (!apiKey) {
+                    throw new Error('API key not found. Please set it in the extension options.');
+                }
+                const result = await simpleCreateCard(apiKey, request.data);
+                console.log('[background] - Supernotes card created successfully', result);
+                resolve({
+                    action: CREATE_CARD_RESPONSE,
+                    result: { success: true, message: 'Card created successfully!' },
+                });
+            } catch (error) {
+                console.error('[background] Failed to create Supernotes card', error);
+                const errorMessage = (error as Error).message;
+                resolve({
+                    action: CREATE_CARD_RESPONSE,
+                    result: { success: false, message: errorMessage },
+                });
+            }
+        }
+    });
 });
