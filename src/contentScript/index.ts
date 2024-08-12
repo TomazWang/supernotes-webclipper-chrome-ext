@@ -135,7 +135,7 @@ function getMetaDescription(): string {
 function createCardMarkup(data: { title: string; url: string; description: string; notes: string; tags: string[] }): {
     name: string;
     markup: string;
-    tags: string[];
+    // tags: string[];
 } {
     console.log('[contentScript] #createCardMarkup - Creating card markup', data);
     const cardContent = `
@@ -145,12 +145,12 @@ ${data.url}
 ${data.notes}`;
 
     const cardTitle = `Web Clip - ${data.title}`;
-    const tags = [...data.tags, '__clip'];
+    // const tags = [...data.tags, '__clip'];
 
     return {
         name: cardTitle,
         markup: cardContent,
-        tags: tags,
+        // tags: tags,
     };
 }
 

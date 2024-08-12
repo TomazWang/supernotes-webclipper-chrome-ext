@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "Supernotes Web Clipper (Unofficial)",
+    "name": "Sn Web Clipper (Unofficial)",
     "version": "1.0",
     "description": "Unofficial web clipper extension of Supernotes",
     "permissions": ["activeTab", "storage", "tabs"],
@@ -26,5 +26,14 @@
             "resources": ["tailwind.css"],
             "matches": ["<all_urls>"]
         }
-    ]
+    ],
+    "commands": {
+        "_execute_action": {
+            "suggested_key": {
+              "default": "Ctrl+Shift+Y",
+              "mac": "Command+Shift+Y"
+            },
+            "description": "Open Supernotes Web Clipper"
+          }
+    }
 }

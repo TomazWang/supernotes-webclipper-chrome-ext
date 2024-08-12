@@ -1,9 +1,24 @@
 // background/index.ts
-import { browser } from 'webextension-polyfill-ts';
+import { browser, Tabs } from 'webextension-polyfill-ts';
 import { TOGGLE_POPUP, CREATE_CARD, CREATE_CARD_RESPONSE, GET_TAB_INFO, GET_TAB_INFO_RESPONSE } from '../common/actions';
 import { simpleCreateCard } from '../utils/api';
 
 console.log('[background] Background script loaded');
+
+// Function to handle opening the popup
+function openPopup(tab: Tabs.Tab) {
+    console.log('[background] - Opening popup', tab);
+    if (tab.id) {
+        console.log('[background] - Sending TOGGLE_POPUP message to tab', tab.id);
+        chrome.tabs.sendMessage(tab.id, { action: TOGGLE_POPUP }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.error('[background] - Error sending message:', JSON.stringify(chrome.runtime.lastError));
+            } else {
+                console.log('[background] - Message sent successfully', response);
+            }
+        });
+    }
+}
 
 async function getTabInfo() {
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
@@ -32,6 +47,16 @@ browser.action.onClicked.addListener((tab) => {
                 console.error('[background] - Error sending message:', JSON.stringify(chrome.runtime.lastError));
             } else {
                 console.log('[background] - Message sent successfully', response);
+            }
+        });
+    }
+});
+
+browser.commands.onCommand.addListener((command) => {
+    if (command === '_execute_action') {
+        browser.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
+            if (tab) {
+                openPopup(tab);
             }
         });
     }

@@ -8,7 +8,7 @@ const Popup = () => {
     const [title, setTitle] = useState('');
     const [url, setUrl] = useState('');
     const [notes, setNotes] = useState('');
-    const [tags, setTags] = useState('');
+    // const [tags, setTags] = useState('');
     const [favicon, setFavicon] = useState('');
     const [desc, setDesc] = useState('');
     const [isCapturing, setIsCapturing] = useState(false);
@@ -75,7 +75,7 @@ const Popup = () => {
             url,
             description: desc,
             notes,
-            tags: tags ? tags.split(',').map((tag) => tag.trim()) : [],
+            // tags: tags ? tags.split(',').map((tag) => tag.trim()) : [],
         };
         window.parent.postMessage({ action: CAPTURE_TAB, data: captureData }, '*');
     };
@@ -146,7 +146,7 @@ const Popup = () => {
                     />
                 </div>
 
-                <div id="snc-tags" className="mb-6 flex-shrink-0">
+                {/* <div id="snc-tags" className="mb-6 flex-shrink-0">
                     <input
                         id="snc-tags-input"
                         type="text"
@@ -155,7 +155,7 @@ const Popup = () => {
                         value={tags}
                         onChange={(e) => setTags(e.target.value)}
                     />
-                </div>
+                </div> */}
             </div>
             <div id="snc-actions" className="flex justify-between items-center mt-4">
                 <button
